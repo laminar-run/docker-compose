@@ -17,6 +17,20 @@ fi
 export SECRET=$(openssl rand -hex 20 | cut -c 1-32)
 export NEXTAUTH_SECRET=$(openssl rand -base64 32)
 
+# Ask if HTTPS should be enabled
+echo "Do you want to enable HTTPS? (y/N)"
+read -r ENABLE_HTTPS
+ENABLE_HTTPS=${ENABLE_HTTPS:-n}
+
+if [[ $ENABLE_HTTPS =~ ^[Yy]$ ]]; then
+  # Generate self-signed SSL certificate
+  mkdir -p certs
+  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs/tls.key -out certs/tls.crt -subj "/CN=localhost"
+  export USE_HTTPS=true
+else
+  export USE_HTTPS=false
+fi
+
 # Ask for Docker Hub credentials
 echo "What is your Laminar Docker Hub token or password?"
 read -rs DOCKER_TOKEN
@@ -34,21 +48,24 @@ fi
 export SPRING_DATASOURCE_URL="jdbc:postgresql://db:5432/laminar"
 export SPRING_DATASOURCE_USERNAME="laminar"
 export SPRING_DATASOURCE_PASSWORD=$(openssl rand -hex 20 | cut -c 1-16)
-export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=lamflowfiles;AccountKey=your_account_key;EndpointSuffix=core.windows.net"
-export AZURE_STORAGE_SHARE_NAME="flowfiles"
-export LOGGING_LEVEL_ROOT="WARN"
-export LOGGING_LEVEL_WEB="INFO"
-export LOGGING_LEVEL_RUN_LAMINAR="DEBUG"
 export KEYCLOAK_REALM="laminar"
 export KEYCLOAK_CLIENT_ID="laminar-client"
 export KEYCLOAK_CLIENT_SECRET=$(openssl rand -hex 20)
 export KEYCLOAK_ADMIN="admin"
 export KEYCLOAK_ADMIN_PASSWORD=$(openssl rand -hex 20)
-export NEXT_PUBLIC_POSTHOG_KEY=""
-export NEXT_PUBLIC_POSTHOG_HOST="https://us.posthog.com"
+
+if [[ $USE_HTTPS == true ]]; then
+  export NEXTAUTH_URL="https://localhost"
+  export NEXT_PUBLIC_LAMINAR_API_URL="https://api:8080"
+  export NEXT_PUBLIC_KEYCLOAK_URL="https://keycloak:8180"
+else
+  export NEXTAUTH_URL="http://localhost"
+  export NEXT_PUBLIC_LAMINAR_API_URL="http://api:8080"
+  export NEXT_PUBLIC_KEYCLOAK_URL="http://keycloak:8080"
+fi
 
 # Create .env file
-env | grep -E "SPRING_|AZURE_|LOGGING_|SECRET|KEYCLOAK_|NEXT_PUBLIC_|NEXTAUTH_" > .env
+env | grep -E "SPRING_|AZURE_|SECRET|KEYCLOAK_|NEXT_|NEXTAUTH_|USE_HTTPS" > .env
 
 # Save important secrets to a separate file
 echo "DATABASE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}" > laminar_secrets.txt
