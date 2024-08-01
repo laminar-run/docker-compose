@@ -1,0 +1,151 @@
+version: "3.8"
+services:
+  frontend:
+    image: laminarrun/on-prem-frontend:2024.08.01-v0.0.1
+    container_name: frontend
+    restart: always
+    ports:
+      - 443:443
+      - 80:80
+    environment:
+      - NEXTAUTH_URL=https://localhost
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXT_PUBLIC_LAMINAR_API_URL=http://api:8080
+      - NEXT_PUBLIC_KEYCLOAK_URL=http://keycloak:8080
+      - NEXT_PUBLIC_KEYCLOAK_REALM=${KEYCLOAK_REALM}
+      - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+      - NEXT_PUBLIC_ENVIRONMENT=production
+      - NEXT_PUBLIC_POSTHOG_KEY=${NEXT_PUBLIC_POSTHOG_KEY}
+      - NEXT_PUBLIC_POSTHOG_HOST=${NEXT_PUBLIC_POSTHOG_HOST}
+    networks:
+      - laminarnet
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/healthcheck"]
+      interval: 15s
+      timeout: 15s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      api:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+  api:
+    image: laminarrun/on-prem-api:2024.08.01-v0.0.1
+    container_name: api
+    restart: always
+    ports:
+      - 8080:8080
+    networks:
+      - laminarnet
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/laminar
+      - SPRING_DATASOURCE_USERNAME=laminar
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
+      - AZURE_STORAGE_SHARE_NAME=${AZURE_STORAGE_SHARE_NAME}
+      - LOGGING_LEVEL_ROOT=${LOGGING_LEVEL_ROOT}
+      - LOGGING_LEVEL_WEB=${LOGGING_LEVEL_WEB}
+      - LOGGING_LEVEL_RUN_LAMINAR=${LOGGING_LEVEL_RUN_LAMINAR}
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/auth
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM}
+      - KEYCLOAK_RESOURCE=${KEYCLOAK_CLIENT_ID}
+      - KEYCLOAK_CREDENTIALS_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - TEMPORAL_HOST_PORT=temporal:7233
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 15s
+      retries: 10
+      start_period: 180s
+    depends_on:
+      db:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+
+  db:
+    image: postgres:14.12
+    container_name: db
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=laminar
+      - POSTGRES_USER=laminar
+      - POSTGRES_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+    networks:
+      - laminarnet
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "laminar"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    environment:
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://db:5432/keycloak
+      - KC_DB_USERNAME=laminar
+      - KC_DB_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+    command:
+      - start-dev
+    ports:
+      - 8180:8080
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - laminarnet
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 15s
+      timeout: 15s
+      retries: 10
+      start_period: 30s
+
+  temporal:
+    image: temporalio/auto-setup:1.20.0
+    container_name: temporal
+    ports:
+      - 7233:7233
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=laminar
+      - POSTGRES_PWD=${SPRING_DATASOURCE_PASSWORD}
+      - POSTGRES_SEEDS=db
+    depends_on:
+      - db
+    networks:
+      - laminarnet
+
+  temporal-ui:
+    image: temporalio/ui:2.10.3
+    container_name: temporal-ui
+    ports:
+      - 8088:8080
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    depends_on:
+      - temporal
+    networks:
+      - laminarnet
+
+networks:
+  laminarnet:
+
+volumes:
+  postgres_data:
+    driver: local
