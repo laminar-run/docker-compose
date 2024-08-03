@@ -5,19 +5,21 @@ services:
     container_name: frontend
     restart: always
     ports:
-      - "${HTTPS_PORT:-443}:${HTTPS_PORT:-443}"
-      - "${HTTP_PORT:-80}:${HTTP_PORT:-80}"
-    volumes:
-      - ${USE_HTTPS:+./certs:/app/certs:ro}
+      - "443:443"
+      - "80:80"
+    # Uncomment these lines to use custom certificates
+    # volumes:
+    #   - ./certs/tls.crt:/app/certs/tls.crt:ro
+    #   - ./certs/tls.key:/app/certs/tls.key:ro
     environment:
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXT_PUBLIC_LAMINAR_API_URL=${NEXT_PUBLIC_LAMINAR_API_URL}
-      - NEXT_PUBLIC_KEYCLOAK_URL=${NEXT_PUBLIC_KEYCLOAK_URL}
+      - NEXT_PUBLIC_LAMINAR_API_URL=http://api:8080
+      - NEXT_PUBLIC_KEYCLOAK_URL=http://keycloak:8080
       - NEXT_PUBLIC_KEYCLOAK_REALM=${KEYCLOAK_REALM}
       - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
       - NEXT_PUBLIC_ENVIRONMENT=production
-      - USE_HTTPS=${USE_HTTPS}
+      - USE_HTTPS=${USE_HTTPS:-false}
       - NEXT_ON_PREM=true
     networks:
       - laminarnet
@@ -39,8 +41,6 @@ services:
     restart: always
     ports:
       - 8080:8080
-    volumes:
-      - ${USE_HTTPS:+./certs:/app/certs:ro}
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/laminar
       - SPRING_DATASOURCE_USERNAME=laminar
@@ -54,7 +54,6 @@ services:
       - KEYCLOAK_RESOURCE=${KEYCLOAK_CLIENT_ID}
       - KEYCLOAK_CREDENTIALS_SECRET=${KEYCLOAK_CLIENT_SECRET}
       - TEMPORAL_HOST_PORT=temporal:7233
-      - USE_HTTPS=${USE_HTTPS}
       - ON_PREM=true
     networks:
       - laminarnet
@@ -103,13 +102,11 @@ services:
       - KC_DB_URL=jdbc:postgresql://db:5432/keycloak
       - KC_DB_USERNAME=laminar
       - KC_DB_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
-      - KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/certs/tls.crt
-      - KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/certs/tls.key
-    command: ${USE_HTTPS:+start --https-certificate-file=/opt/keycloak/certs/tls.crt --https-certificate-key-file=/opt/keycloak/certs/tls.key}
+    command: start-dev
     volumes:
-      - ${USE_HTTPS:+./certs:/opt/keycloak/certs:ro}
+      - ./certs:/opt/keycloak/certs:ro
     ports:
-      - "${KEYCLOAK_PORT:-8180}:${USE_HTTPS:+8443}"
+      - "${KEYCLOAK_PORT:-8180}:8080"
     depends_on:
       - db
     networks:

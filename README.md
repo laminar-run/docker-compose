@@ -26,30 +26,23 @@ To quickly set up and start Laminar, run:
 
 * (Optional) An S3 bucket for backups and storage (configuration details provided separately)
 
-### HTTPS Configuration (Optional)
+## HTTPS Configuration (Optional)
 
-By default, the setup uses HTTP. To enable HTTPS:
+> Note: this can be done with our `start.sh` script.
 
-1. When running ./start.sh, answer 'y' when asked if you want to enable HTTPS.
-2. This will generate self-signed certificates for testing purposes.
+Prerequisites:
+* Ensure that a certificate has been created for the domain name that will be used to access the Laminar platform. Ensure that it is a valid, signed certificate.
 
-For production use with your own certificates:
-
-1. Place your certificates in the certs directory:
-  * certs/tls.crt - the X509 certificate file in PEM format
-  * certs/tls.key - the private key file in PEM format
-2. Ensure USE_HTTPS=true is set in your .env file.
-
-### Services
-
-The following services are included in this deployment:
-
-* Frontend (Next.js application)
-* API (Spring Boot application)
-* PostgreSQL Database
-* Keycloak (for authentication)
-* Temporal (for workflow management)
-* Temporal UI
+Setup:
+1. Add the following files to the docker-compose directory:
+   * `certs/tls.crt` - the X509 certificate file in PEM format
+   * `certs/tls.key` - the private key file in PEM format
+2. Uncomment the following lines in the docker-compose.yml file for both the frontend and api services:
+   ```yaml
+   # volumes:
+   #   - ./certs/tls.crt:/app/certs/tls.crt:ro
+   #   - ./certs/tls.key:/app/certs/tls.key:ro
+   ```
 
 ### Troubleshooting
 

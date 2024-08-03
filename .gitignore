@@ -1,0 +1,3 @@
+certs/
+laminar_secrets.txt
+.env

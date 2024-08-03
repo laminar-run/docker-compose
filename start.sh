@@ -53,19 +53,23 @@ export KEYCLOAK_CLIENT_ID="laminar-client"
 export KEYCLOAK_CLIENT_SECRET=$(openssl rand -hex 20)
 export KEYCLOAK_ADMIN="admin"
 export KEYCLOAK_ADMIN_PASSWORD=$(openssl rand -hex 20)
+export LOGGING_LEVEL_ROOT="WARN"
+export LOGGING_LEVEL_WEB="INFO"
+export LOGGING_LEVEL_RUN_LAMINAR="DEBUG"
+export KEYCLOAK_PORT="8180"
 
 if [[ $USE_HTTPS == true ]]; then
   export NEXTAUTH_URL="https://localhost"
-  export NEXT_PUBLIC_LAMINAR_API_URL="https://api:8080"
-  export NEXT_PUBLIC_KEYCLOAK_URL="https://keycloak:8180"
+  export NEXT_PUBLIC_LAMINAR_API_URL="https://localhost:8080"
+  export NEXT_PUBLIC_KEYCLOAK_URL="https://localhost:${KEYCLOAK_PORT}"
 else
   export NEXTAUTH_URL="http://localhost"
-  export NEXT_PUBLIC_LAMINAR_API_URL="http://api:8080"
-  export NEXT_PUBLIC_KEYCLOAK_URL="http://keycloak:8080"
+  export NEXT_PUBLIC_LAMINAR_API_URL="http://localhost:8080"
+  export NEXT_PUBLIC_KEYCLOAK_URL="http://localhost:${KEYCLOAK_PORT}"
 fi
 
 # Create .env file
-env | grep -E "SPRING_|AZURE_|SECRET|KEYCLOAK_|NEXT_|NEXTAUTH_|USE_HTTPS" > .env
+env | grep -E "SPRING_|SECRET|KEYCLOAK_|NEXT_|NEXTAUTH_|USE_HTTPS|LOGGING_" > .env
 
 # Save important secrets to a separate file
 echo "DATABASE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}" > laminar_secrets.txt
