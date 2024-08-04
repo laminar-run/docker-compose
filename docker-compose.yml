@@ -18,7 +18,7 @@ services:
       - laminarnet
 
   frontend:
-    image: laminarrun/on-prem-frontend:2024.08.03-0.0.2
+    image: laminarrun/on-prem-frontend:2024.08.03-v0.0.3
     container_name: frontend
     restart: always
     environment:
@@ -48,7 +48,7 @@ services:
         condition: service_healthy
 
   api:
-    image: laminarrun/on-prem-api:2024.08.01-v0.0.1
+    image: laminarrun/on-prem-api:2024.08.03-v0.0.3
     container_name: api
     restart: always
     volumes:
