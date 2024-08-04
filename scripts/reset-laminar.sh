@@ -10,3 +10,11 @@ docker-compose rm -f
 
 echo "Pruning old images..."
 docker image prune -a -f
+
+echo "Deleting old volumes..."
+docker volume prune -f
+
+echo "Removing files..."
+rm -rf $PARENT_DIRECTORY/certs
+rm -rf $PARENT_DIRECTORY/.env
+rm -rf $PARENT_DIRECTORY/laminar_*.txt

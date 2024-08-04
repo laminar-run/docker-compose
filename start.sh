@@ -10,14 +10,15 @@ if [ -f .env ]; then
   echo "Would you like to start the server now? (Y/n)"
   read -r START_SERVER
   if [ "$START_SERVER" != "n" ]; then
+    docker-compose pull
     docker-compose up -d
   fi
   exit 0
 fi
 
 # If token file exists, read the token from it
-if [ -f $PARENT_DIRECTORY/.token ]; then
-  DOCKER_TOKEN=$(cat $PARENT_DIRECTORY/.token)
+if [ -f $SCRIPT_DIRECTORY/.token ]; then
+  DOCKER_TOKEN=$(cat $SCRIPT_DIRECTORY/.token)
 fi
 
 # If token is not set, prompt user for token
@@ -81,7 +82,6 @@ export NEXTAUTH_URL="https://localhost"
 export NEXT_PUBLIC_LAMINAR_API_URL="https://localhost/laminar-api"
 export NEXT_PUBLIC_KEYCLOAK_URL="https://localhost/auth"
 
-# Create .env file
 # Create .env file
 env | grep -E "SPRING_|SECRET|KEYCLOAK_|NEXT_|NEXTAUTH_|USE_HTTPS|LOGGING_|SSL_KEYSTORE_PASSWORD|API_PORT|API_URL|SERVER_TOMCAT_|NOTIFICATION_API_TOKEN|TEMPORAL_SERVICE_ADDRESS|POSTGRES_PASSWORD|LOGTAIL_SOURCE_TOKEN" > .env
 

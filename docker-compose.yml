@@ -54,26 +54,26 @@ services:
     volumes:
       - ./certs:/app/certs:ro
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/laminar
-      - SPRING_DATASOURCE_USERNAME=laminar
-      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
-      - SPRING_PROFILES_ACTIVE=prod
-      - LOGGING_LEVEL_ROOT=${LOGGING_LEVEL_ROOT}
-      - LOGGING_LEVEL_WEB=${LOGGING_LEVEL_WEB}
-      - LOGGING_LEVEL_RUN_LAMINAR=${LOGGING_LEVEL_RUN_LAMINAR}
-      - LOGTAIL_SOURCE_TOKEN=${LOGTAIL_SOURCE_TOKEN}
-      - SPRING_TRANSACTION_DEFAULT_TIMEOUT=900
-      - API_URL=https://localhost/laminar-api
-      - SERVER_TOMCAT_ACCEPT_COUNT=300
-      - SERVER_TOMCAT_CONNECTION_TIMEOUT=20000
-      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=400
-      - SPRING_DATASOURCE_HIKARI_MAX_LIFETIME=2000000
-      - SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=30000
-      - NOTIFICATION_API_TOKEN=${NOTIFICATION_API_TOKEN}
-      - TEMPORAL_SERVICE_ADDRESS=temporal:7233
-      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
-      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
-      - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI=https://localhost/auth/realms/${KEYCLOAK_REALM}
+      - db_url=jdbc:postgresql://postgres:5432/laminar
+      - spring.datasource.username=laminar
+      - spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+      - spring.profiles.active=prod
+      - logging.level.root=${LOGGING_LEVEL_ROOT}
+      - logging.level.web=${LOGGING_LEVEL_WEB}
+      - logging.level.run.laminar=${LOGGING_LEVEL_RUN_LAMINAR}
+      - logtail_source_token=${LOGTAIL_SOURCE_TOKEN}
+      - spring.transaction.default-timeout=900
+      - api_url=https://localhost/laminar-api
+      - server.tomcat.accept-count=300
+      - server.tomcat.connection-timeout=20000
+      - spring.datasource.hikari.maximum-pool-size=400
+      - spring.datasource.hikari.max-lifetime=2000000
+      - spring.datasource.hikari.connection-timeout=30000
+      - notification_api_token=${NOTIFICATION_API_TOKEN}
+      - temporal.service.address=temporal:7233
+      - keycloak.client_id=${KEYCLOAK_CLIENT_ID}
+      - keycloak.client_secret=${KEYCLOAK_CLIENT_SECRET}
+      - keycloak.uri=https://localhost/auth/realms/${KEYCLOAK_REALM}
       - ON_PREM=true
       - SERVER_SSL_ENABLED=false
     networks:
@@ -100,10 +100,12 @@ services:
       - 5432:5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
     environment:
-      - POSTGRES_DB=laminar
-      - POSTGRES_USER=laminar
-      - POSTGRES_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      POSTGRES_USER: laminar
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      POSTGRES_DB: laminar
+      POSTGRES_MULTIPLE_DATABASES: laminar,keycloak
     networks:
       - laminarnet
     healthcheck:
@@ -127,7 +129,9 @@ services:
       - KC_HOSTNAME_PORT=443
       - KC_HOSTNAME_STRICT_HTTPS=true
       - KC_PROXY=edge
-    command: start-dev
+    command: start
+    volumes:
+      - keycloak_data:/opt/keycloak/data
     networks:
       - laminarnet
     healthcheck:
@@ -174,4 +178,6 @@ networks:
 
 volumes:
   postgres_data:
+    driver: local
+  keycloak_data:
     driver: local
