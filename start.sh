@@ -57,6 +57,7 @@ export SPRING_DATASOURCE_URL="jdbc:postgresql://postgres:5432/laminar"
 export SPRING_DATASOURCE_USERNAME="laminar"
 export SPRING_DATASOURCE_PASSWORD=$(openssl rand -hex 20 | cut -c 1-16)
 export KEYCLOAK_REALM="laminar"
+export KEYCLOAK_URI="https://localhost/auth/realms/${KEYCLOAK_REALM}"
 export KEYCLOAK_CLIENT_ID="laminar-client"
 export KEYCLOAK_CLIENT_SECRET=$(openssl rand -hex 20)
 export KEYCLOAK_ADMIN="admin"

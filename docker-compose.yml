@@ -73,7 +73,7 @@ services:
       - temporal.service.address=temporal:7233
       - keycloak.client_id=${KEYCLOAK_CLIENT_ID}
       - keycloak.client_secret=${KEYCLOAK_CLIENT_SECRET}
-      - keycloak.uri=https://localhost/auth/realms/${KEYCLOAK_REALM}
+      - keycloak.uri=${KEYCLOAK_URI}
       - ON_PREM=true
       - SERVER_SSL_ENABLED=false
     networks:
