@@ -2,6 +2,8 @@
 SCRIPT_DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PARENT_DIRECTORY="${SCRIPT_DIRECTORY%/*}"
 
+mkdir -p certs
+
 # Check if .env exists:
 if [ -f .env ]; then
   echo "It looks like you have already set up Laminar. If you want to reinstall, please remove the .env file and try again."
@@ -96,7 +98,26 @@ if [ "$START_SERVER" != "n" ]; then
   docker-compose up -d
 fi
 
-echo "Laminar setup complete!"
+# Output service access information to a file
+cat << EOF > laminar_access_info.txt
+Laminar Service Access Information:
+
+Frontend: ${NEXTAUTH_URL}
+API: ${NEXT_PUBLIC_LAMINAR_API_URL}
+Keycloak: ${NEXT_PUBLIC_KEYCLOAK_URL}
+Temporal: http://localhost:7233
+Temporal UI: http://localhost:8088
+
+Database:
+  Host: localhost
+  Port: 5432
+  Username: laminar
+  Database: laminar
+
+Please refer to laminar_secrets.txt for passwords and other sensitive information.
+EOF
+
+echo "Service access information has been saved to laminar_access_info.txt"
 
 if [[ $USE_HTTPS == true ]]; then
   echo "HTTPS is enabled. You can access the application at https://localhost"
@@ -108,3 +129,8 @@ fi
 
 echo "Keycloak is available at ${NEXT_PUBLIC_KEYCLOAK_URL}"
 echo "Please refer to the documentation for further instructions on using the API and configuring Keycloak."
+
+echo "Laminar setup complete!"
+echo "Service access information has been saved to laminar_access_info.txt"
+echo "Important secrets have been saved to laminar_secrets.txt"
+echo "Please keep these files secure and do not share them."

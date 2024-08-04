@@ -1,3 +1,4 @@
 certs/
 laminar_secrets.txt
+laminar_access_info.txt
 .env
