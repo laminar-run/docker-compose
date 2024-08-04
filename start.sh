@@ -51,7 +51,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Set up environment variables
-export SPRING_DATASOURCE_URL="jdbc:postgresql://db:5432/laminar"
+export SPRING_DATASOURCE_URL="jdbc:postgresql://postgres:5432/laminar"
 export SPRING_DATASOURCE_USERNAME="laminar"
 export SPRING_DATASOURCE_PASSWORD=$(openssl rand -hex 20 | cut -c 1-16)
 export KEYCLOAK_REALM="laminar"
@@ -88,16 +88,6 @@ if [[ $USE_HTTPS == true ]]; then
   echo "SSL_KEYSTORE_PASSWORD=${SSL_KEYSTORE_PASSWORD}" >> laminar_secrets.txt
 fi
 
-echo "Environment setup complete. Important secrets have been saved to laminar_secrets.txt"
-echo "Please keep this file secure and do not share it."
-
-echo "Would you like to start the server now? (Y/n)"
-read -r START_SERVER
-if [ "$START_SERVER" != "n" ]; then
-  docker-compose pull
-  docker-compose up -d
-fi
-
 # Output service access information to a file
 cat << EOF > laminar_access_info.txt
 Laminar Service Access Information:
@@ -117,7 +107,10 @@ Database:
 Please refer to laminar_secrets.txt for passwords and other sensitive information.
 EOF
 
+echo "Laminar setup complete!"
 echo "Service access information has been saved to laminar_access_info.txt"
+echo "Important secrets have been saved to laminar_secrets.txt"
+echo "Please keep these files secure and do not share them."
 
 if [[ $USE_HTTPS == true ]]; then
   echo "HTTPS is enabled. You can access the application at https://localhost"
@@ -130,7 +123,9 @@ fi
 echo "Keycloak is available at ${NEXT_PUBLIC_KEYCLOAK_URL}"
 echo "Please refer to the documentation for further instructions on using the API and configuring Keycloak."
 
-echo "Laminar setup complete!"
-echo "Service access information has been saved to laminar_access_info.txt"
-echo "Important secrets have been saved to laminar_secrets.txt"
-echo "Please keep these files secure and do not share them."
+echo "Would you like to start the server now? (Y/n)"
+read -r START_SERVER
+if [ "$START_SERVER" != "n" ]; then
+  docker-compose pull
+  docker-compose up -d
+fi

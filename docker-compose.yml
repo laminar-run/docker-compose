@@ -44,7 +44,7 @@ services:
     volumes:
       - ./certs:/app/certs:ro
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/laminar
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/laminar
       - SPRING_DATASOURCE_USERNAME=laminar
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
       - SPRING_PROFILES_ACTIVE=prod
@@ -70,16 +70,16 @@ services:
       retries: 10
       start_period: 180s
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
       keycloak:
         condition: service_healthy
       temporal:
         condition: service_started
 
-  db:
+  postgres:
     image: postgres:14.12
-    container_name: db
+    container_name: postgres
     restart: always
     ports:
       - 5432:5432
@@ -105,7 +105,7 @@ services:
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - KC_DB=postgres
-      - KC_DB_URL=jdbc:postgresql://db:5432/keycloak
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
       - KC_DB_USERNAME=laminar
       - KC_DB_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
       - KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/certs/tls.crt
@@ -116,7 +116,7 @@ services:
     ports:
       - "${KEYCLOAK_PORT:-8180}:8080"
     depends_on:
-      - db
+      - postgres
     networks:
       - laminarnet
     healthcheck:
@@ -136,9 +136,9 @@ services:
       - DB_PORT=5432
       - POSTGRES_USER=laminar
       - POSTGRES_PWD=${SPRING_DATASOURCE_PASSWORD}
-      - POSTGRES_SEEDS=db
+      - POSTGRES_SEEDS=postgres
     depends_on:
-      - db
+      - postgres
     networks:
       - laminarnet
 
