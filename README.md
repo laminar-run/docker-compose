@@ -26,23 +26,29 @@ To quickly set up and start Laminar, run:
 
 * (Optional) An S3 bucket for backups and storage (configuration details provided separately)
 
-## HTTPS Configuration (Optional)
+## HTTPS Configuration
 
-> Note: this can be done with our `start.sh` script.
+HTTPS is enabled by default using Nginx. The `start.sh` script generates self-signed certificates for development purposes. For production use, replace the certificates in the certs directory:
 
-Prerequisites:
-* Ensure that a certificate has been created for the domain name that will be used to access the Laminar platform. Ensure that it is a valid, signed certificate.
+`certs/tls.crt` - the X509 certificate file in PEM format
+`certs/tls.key` - the private key file in PEM format
 
-Setup:
-1. Add the following files to the docker-compose directory:
-   * `certs/tls.crt` - the X509 certificate file in PEM format
-   * `certs/tls.key` - the private key file in PEM format
-2. Uncomment the following lines in the docker-compose.yml file for both the frontend and api services:
-   ```yaml
-   # volumes:
-   #   - ./certs/tls.crt:/app/certs/tls.crt:ro
-   #   - ./certs/tls.key:/app/certs/tls.key:ro
-   ```
+## Service Access
+
+After deployment, services are accessible at the following URLs:
+
+* Frontend: https://localhost
+* API: https://localhost/laminar-api
+* Keycloak: https://localhost/auth
+* Temporal UI: https://localhost/temporal
+
+## Environment Variables
+
+Environment variables are automatically generated and stored in the `.env` file. Sensitive information is stored separately in `laminar_secrets.txt`.
+
+## Customization
+
+To customize the deployment, modify the `docker-compose.yml` and `nginx.conf` files as needed.
 
 ### Troubleshooting
 

@@ -2,3 +2,4 @@ certs/
 laminar_secrets.txt
 laminar_access_info.txt
 .env
+.DS_Store

@@ -19,23 +19,16 @@ fi
 export SECRET=$(openssl rand -hex 20 | cut -c 1-32)
 export NEXTAUTH_SECRET=$(openssl rand -base64 32)
 
-# Ask if HTTPS should be enabled
-echo "Do you want to enable HTTPS? (y/N)"
-read -r ENABLE_HTTPS
-ENABLE_HTTPS=${ENABLE_HTTPS:-n}
+# HTTPS is always enabled with Nginx
+export USE_HTTPS=true
 
-if [[ $ENABLE_HTTPS =~ ^[Yy]$ ]]; then
-  # Generate self-signed SSL certificate
-  mkdir -p certs
-  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs/tls.key -out certs/tls.crt -subj "/CN=localhost"
-  export USE_HTTPS=true
-  
-  # Create a PKCS12 keystore for the API
-  export SSL_KEYSTORE_PASSWORD=$(openssl rand -hex 16)
-  openssl pkcs12 -export -in certs/tls.crt -inkey certs/tls.key -out certs/keystore.p12 -name laminar -password pass:$SSL_KEYSTORE_PASSWORD
-else
-  export USE_HTTPS=false
-fi
+# Generate self-signed SSL certificate
+mkdir -p certs
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs/tls.key -out certs/tls.crt -subj "/CN=localhost"
+
+# Create a PKCS12 keystore for the API
+export SSL_KEYSTORE_PASSWORD=$(openssl rand -hex 16)
+openssl pkcs12 -export -in certs/tls.crt -inkey certs/tls.key -out certs/keystore.p12 -name laminar -password pass:$SSL_KEYSTORE_PASSWORD
 
 # Ask for Docker Hub credentials
 echo "What is your Laminar Docker Hub token or password?"
@@ -64,19 +57,24 @@ export LOGGING_LEVEL_WEB="INFO"
 export LOGGING_LEVEL_RUN_LAMINAR="DEBUG"
 export KEYCLOAK_PORT="8180"
 export API_PORT="8080"
+export SPRING_TRANSACTION_DEFAULT_TIMEOUT="900"
+export API_URL="https://localhost/laminar-api"
+export SERVER_TOMCAT_ACCEPT_COUNT="300"
+export SERVER_TOMCAT_CONNECTION_TIMEOUT="20000"
+export SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE="400"
+export SPRING_DATASOURCE_HIKARI_MAX_LIFETIME="2000000"
+export SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT="30000"
+export NOTIFICATION_API_TOKEN=$(openssl rand -hex 20)
+export TEMPORAL_SERVICE_ADDRESS="temporal:7233"
+export NEXT_PUBLIC_POSTHOG_KEY=""
+export NEXT_PUBLIC_POSTHOG_HOST="https://us.posthog.com"
 
-if [[ $USE_HTTPS == true ]]; then
-  export NEXTAUTH_URL="https://localhost"
-  export NEXT_PUBLIC_LAMINAR_API_URL="https://localhost:${API_PORT}"
-  export NEXT_PUBLIC_KEYCLOAK_URL="https://localhost:${KEYCLOAK_PORT}"
-else
-  export NEXTAUTH_URL="http://localhost"
-  export NEXT_PUBLIC_LAMINAR_API_URL="http://localhost:${API_PORT}"
-  export NEXT_PUBLIC_KEYCLOAK_URL="http://localhost:${KEYCLOAK_PORT}"
-fi
+export NEXTAUTH_URL="https://localhost"
+export NEXT_PUBLIC_LAMINAR_API_URL="https://localhost/laminar-api"
+export NEXT_PUBLIC_KEYCLOAK_URL="https://localhost/auth"
 
 # Create .env file
-env | grep -E "SPRING_|SECRET|KEYCLOAK_|NEXT_|NEXTAUTH_|USE_HTTPS|LOGGING_|SSL_KEYSTORE_PASSWORD|API_PORT" > .env
+env | grep -E "SPRING_|SECRET|KEYCLOAK_|NEXT_|NEXTAUTH_|USE_HTTPS|LOGGING_|SSL_KEYSTORE_PASSWORD|API_PORT|API_URL|SERVER_TOMCAT_|NOTIFICATION_API_TOKEN|TEMPORAL_SERVICE_ADDRESS" > .env
 
 # Save important secrets to a separate file
 echo "DATABASE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}" > laminar_secrets.txt
@@ -84,9 +82,8 @@ echo "SECRET=${SECRET}" >> laminar_secrets.txt
 echo "NEXTAUTH_SECRET=${NEXTAUTH_SECRET}" >> laminar_secrets.txt
 echo "KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}" >> laminar_secrets.txt
 echo "KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}" >> laminar_secrets.txt
-if [[ $USE_HTTPS == true ]]; then
-  echo "SSL_KEYSTORE_PASSWORD=${SSL_KEYSTORE_PASSWORD}" >> laminar_secrets.txt
-fi
+echo "NOTIFICATION_API_TOKEN=${NOTIFICATION_API_TOKEN}" >> laminar_secrets.txt
+echo "SSL_KEYSTORE_PASSWORD=${SSL_KEYSTORE_PASSWORD}" >> laminar_secrets.txt
 
 # Output service access information to a file
 cat << EOF > laminar_access_info.txt
@@ -95,8 +92,8 @@ Laminar Service Access Information:
 Frontend: ${NEXTAUTH_URL}
 API: ${NEXT_PUBLIC_LAMINAR_API_URL}
 Keycloak: ${NEXT_PUBLIC_KEYCLOAK_URL}
-Temporal: http://localhost:7233
-Temporal UI: http://localhost:8088
+Temporal: https://localhost/temporal
+Temporal UI: https://localhost/temporal
 
 Database:
   Host: localhost
@@ -112,15 +109,10 @@ echo "Service access information has been saved to laminar_access_info.txt"
 echo "Important secrets have been saved to laminar_secrets.txt"
 echo "Please keep these files secure and do not share them."
 
-if [[ $USE_HTTPS == true ]]; then
-  echo "HTTPS is enabled. You can access the application at https://localhost"
-  echo "API is available at https://localhost:${API_PORT}"
-else
-  echo "HTTP is enabled. You can access the application at http://localhost"
-  echo "API is available at http://localhost:${API_PORT}"
-fi
-
+echo "HTTPS is enabled. You can access the application at https://localhost"
+echo "API is available at ${NEXT_PUBLIC_LAMINAR_API_URL}"
 echo "Keycloak is available at ${NEXT_PUBLIC_KEYCLOAK_URL}"
+echo "Temporal UI is available at https://localhost/temporal"
 echo "Please refer to the documentation for further instructions on using the API and configuring Keycloak."
 
 echo "Would you like to start the server now? (Y/n)"

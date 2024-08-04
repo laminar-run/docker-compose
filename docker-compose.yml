@@ -1,26 +1,38 @@
 version: "3.8"
 services:
-  frontend:
-    image: laminarrun/on-prem-frontend:2024.08.01-v0.0.1
-    container_name: frontend
+  nginx:
+    image: nginx:latest
+    container_name: nginx
     restart: always
     ports:
-      - "443:443"
       - "80:80"
-    # Uncomment these lines to use custom certificates
-    # volumes:
-    #   - ./certs/tls.crt:/app/certs/tls.crt:ro
-    #   - ./certs/tls.key:/app/certs/tls.key:ro
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - frontend
+      - api
+      - keycloak
+    networks:
+      - laminarnet
+
+  frontend:
+    image: laminarrun/on-prem-frontend:2024.08.03-0.0.2
+    container_name: frontend
+    restart: always
     environment:
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_URL=https://localhost
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXT_PUBLIC_LAMINAR_API_URL=http://api:8080
-      - NEXT_PUBLIC_KEYCLOAK_URL=http://keycloak:8080
+      - NEXT_PUBLIC_LAMINAR_API_URL=https://localhost/laminar-api
+      - NEXT_PUBLIC_KEYCLOAK_URL=https://localhost/auth
       - NEXT_PUBLIC_KEYCLOAK_REALM=${KEYCLOAK_REALM}
       - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
       - NEXT_PUBLIC_ENVIRONMENT=production
-      - USE_HTTPS=${USE_HTTPS:-false}
+      - USE_HTTPS=true
       - NEXT_ON_PREM=true
+      - NEXT_PUBLIC_POSTHOG_KEY=${NEXT_PUBLIC_POSTHOG_KEY}
+      - NEXT_PUBLIC_POSTHOG_HOST=${NEXT_PUBLIC_POSTHOG_HOST}
     networks:
       - laminarnet
     healthcheck:
@@ -39,8 +51,6 @@ services:
     image: laminarrun/on-prem-api:2024.08.01-v0.0.1
     container_name: api
     restart: always
-    ports:
-      - "${API_PORT:-8080}:8080"
     volumes:
       - ./certs:/app/certs:ro
     environment:
@@ -51,16 +61,21 @@ services:
       - LOGGING_LEVEL_ROOT=${LOGGING_LEVEL_ROOT}
       - LOGGING_LEVEL_WEB=${LOGGING_LEVEL_WEB}
       - LOGGING_LEVEL_RUN_LAMINAR=${LOGGING_LEVEL_RUN_LAMINAR}
-      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080/auth
-      - KEYCLOAK_REALM=${KEYCLOAK_REALM}
-      - KEYCLOAK_RESOURCE=${KEYCLOAK_CLIENT_ID}
-      - KEYCLOAK_CREDENTIALS_SECRET=${KEYCLOAK_CLIENT_SECRET}
-      - TEMPORAL_HOST_PORT=temporal:7233
+      - LOGTAIL_SOURCE_TOKEN=${LOGTAIL_SOURCE_TOKEN}
+      - SPRING_TRANSACTION_DEFAULT_TIMEOUT=900
+      - API_URL=https://localhost/laminar-api
+      - SERVER_TOMCAT_ACCEPT_COUNT=300
+      - SERVER_TOMCAT_CONNECTION_TIMEOUT=20000
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=400
+      - SPRING_DATASOURCE_HIKARI_MAX_LIFETIME=2000000
+      - SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=30000
+      - NOTIFICATION_API_TOKEN=${NOTIFICATION_API_TOKEN}
+      - TEMPORAL_SERVICE_ADDRESS=temporal:7233
+      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+      - SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI=https://localhost/auth/realms/${KEYCLOAK_REALM}
       - ON_PREM=true
-      - SERVER_SSL_ENABLED=${USE_HTTPS:-false}
-      - SERVER_SSL_KEY_STORE=/app/certs/keystore.p12
-      - SERVER_SSL_KEY_STORE_PASSWORD=${SSL_KEYSTORE_PASSWORD}
-      - SERVER_SSL_KEY_ALIAS=laminar
+      - SERVER_SSL_ENABLED=false
     networks:
       - laminarnet
     healthcheck:
@@ -108,15 +123,11 @@ services:
       - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
       - KC_DB_USERNAME=laminar
       - KC_DB_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
-      - KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/certs/tls.crt
-      - KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/certs/tls.key
+      - KC_HOSTNAME=localhost
+      - KC_HOSTNAME_PORT=443
+      - KC_HOSTNAME_STRICT_HTTPS=true
+      - KC_PROXY=edge
     command: start-dev
-    volumes:
-      - ./certs:/opt/keycloak/certs:ro
-    ports:
-      - "${KEYCLOAK_PORT:-8180}:8080"
-    depends_on:
-      - postgres
     networks:
       - laminarnet
     healthcheck:
@@ -125,6 +136,8 @@ services:
       timeout: 15s
       retries: 10
       start_period: 30s
+    depends_on:
+      - postgres
 
   temporal:
     image: temporalio/auto-setup:1.20.0
@@ -145,11 +158,9 @@ services:
   temporal-ui:
     image: temporalio/ui:2.10.3
     container_name: temporal-ui
-    ports:
-      - 8088:8080
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+      - TEMPORAL_CORS_ORIGINS=https://localhost
     depends_on:
       - temporal
     networks:
