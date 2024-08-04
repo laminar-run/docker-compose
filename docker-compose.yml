@@ -40,7 +40,9 @@ services:
     container_name: api
     restart: always
     ports:
-      - 8080:8080
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - ${USE_HTTPS:+./certs:/app/certs:ro}
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/laminar
       - SPRING_DATASOURCE_USERNAME=laminar
@@ -55,6 +57,10 @@ services:
       - KEYCLOAK_CREDENTIALS_SECRET=${KEYCLOAK_CLIENT_SECRET}
       - TEMPORAL_HOST_PORT=temporal:7233
       - ON_PREM=true
+      - SERVER_SSL_ENABLED=${USE_HTTPS:-false}
+      - SERVER_SSL_KEY_STORE=/app/certs/keystore.p12
+      - SERVER_SSL_KEY_STORE_PASSWORD=${SSL_KEYSTORE_PASSWORD}
+      - SERVER_SSL_KEY_ALIAS=laminar
     networks:
       - laminarnet
     healthcheck:
@@ -102,11 +108,11 @@ services:
       - KC_DB_URL=jdbc:postgresql://db:5432/keycloak
       - KC_DB_USERNAME=laminar
       - KC_DB_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
-    command: start-dev
+    command: ${USE_HTTPS:+start --https-certificate-file=/opt/keycloak/certs/tls.crt --https-certificate-key-file=/opt/keycloak/certs/tls.key}${USE_HTTPS:-start-dev}
     volumes:
-      - ./certs:/opt/keycloak/certs:ro
+      - ${USE_HTTPS:+./certs:/opt/keycloak/certs:ro}
     ports:
-      - "${KEYCLOAK_PORT:-8180}:8080"
+      - "${KEYCLOAK_PORT:-8180}:${USE_HTTPS:+8443}${USE_HTTPS:-8080}"
     depends_on:
       - db
     networks:

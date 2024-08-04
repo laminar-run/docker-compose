@@ -1,0 +1,46 @@
+name: Update Docker Compose and Create Release
+
+on:
+  repository_dispatch:
+    types:
+      - version
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set Version
+        id: set_version
+        run: echo "version=${{ github.event.client_payload.version }}" >> $GITHUB_OUTPUT
+
+      - name: Update docker-compose.yml
+        id: update_yaml_code
+        run: |
+          file="docker-compose.yml"
+          echo "Updating $file"
+          version=${{ steps.set_version.outputs.version }}
+          sed -i "s/image: laminarrun\/on-prem-frontend:[0-9.]*/image: laminarrun\/on-prem-frontend:$version/" "$file"
+          sed -i "s/image: laminarrun\/on-prem-api:[0-9.]*/image: laminarrun\/on-prem-api:$version/" "$file"
+
+      - name: Commit and Push Changes
+        id: commit_and_push
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add .
+          git commit -m "chore(version): bump to v${{ steps.set_version.outputs.version }}"
+          git push
+          echo "commit_hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          commitish: ${{ steps.commit_and_push.outputs.commit_hash }}
+          tag_name: v${{ steps.set_version.outputs.version }}
+          release_name: v${{ steps.set_version.outputs.version }}
+          draft: false
