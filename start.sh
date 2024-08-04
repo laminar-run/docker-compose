@@ -2,7 +2,7 @@
 SCRIPT_DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PARENT_DIRECTORY="${SCRIPT_DIRECTORY%/*}"
 
-mkdir -p certs
+echo "Setting up Laminar on-premise..."
 
 # Check if .env exists:
 if [ -f .env ]; then
@@ -14,6 +14,27 @@ if [ -f .env ]; then
   fi
   exit 0
 fi
+
+# If token file exists, read the token from it
+if [ -f $PARENT_DIRECTORY/.token ]; then
+  DOCKER_TOKEN=$(cat $PARENT_DIRECTORY/.token)
+fi
+
+# If token is not set, prompt user for token
+if [ -z "$DOCKER_TOKEN" ]; then
+  echo "What is your Laminar on-premise Docker Hub token?"
+  read -rs DOCKER_TOKEN
+fi
+
+echo "$DOCKER_TOKEN" | docker login -u laminaronpremise --password-stdin
+
+# Confirm last command was successful:
+if [ $? -ne 0 ]; then
+  echo "Docker credentials are invalid. Please try again."
+  exit 1
+fi
+
+mkdir -p certs
 
 # Generate necessary keys and secrets
 export SECRET=$(openssl rand -hex 20 | cut -c 1-32)
@@ -29,19 +50,6 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs/tls.key -out c
 # Create a PKCS12 keystore for the API
 export SSL_KEYSTORE_PASSWORD=$(openssl rand -hex 16)
 openssl pkcs12 -export -in certs/tls.crt -inkey certs/tls.key -out certs/keystore.p12 -name laminar -password pass:$SSL_KEYSTORE_PASSWORD
-
-# Ask for Docker Hub credentials
-echo "What is your Laminar Docker Hub token or password?"
-read -rs DOCKER_TOKEN
-
-# Login to Docker Hub (assuming the username is always 'laminaronpremise')
-echo "$DOCKER_TOKEN" | docker login -u laminaronpremise --password-stdin
-
-# Confirm last command was successful:
-if [ $? -ne 0 ]; then
-  echo "Docker credentials are invalid. Please try again."
-  exit 1
-fi
 
 # Set up environment variables
 export SPRING_DATASOURCE_URL="jdbc:postgresql://postgres:5432/laminar"
@@ -74,7 +82,8 @@ export NEXT_PUBLIC_LAMINAR_API_URL="https://localhost/laminar-api"
 export NEXT_PUBLIC_KEYCLOAK_URL="https://localhost/auth"
 
 # Create .env file
-env | grep -E "SPRING_|SECRET|KEYCLOAK_|NEXT_|NEXTAUTH_|USE_HTTPS|LOGGING_|SSL_KEYSTORE_PASSWORD|API_PORT|API_URL|SERVER_TOMCAT_|NOTIFICATION_API_TOKEN|TEMPORAL_SERVICE_ADDRESS" > .env
+# Create .env file
+env | grep -E "SPRING_|SECRET|KEYCLOAK_|NEXT_|NEXTAUTH_|USE_HTTPS|LOGGING_|SSL_KEYSTORE_PASSWORD|API_PORT|API_URL|SERVER_TOMCAT_|NOTIFICATION_API_TOKEN|TEMPORAL_SERVICE_ADDRESS|POSTGRES_PASSWORD|LOGTAIL_SOURCE_TOKEN" > .env
 
 # Save important secrets to a separate file
 echo "DATABASE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}" > laminar_secrets.txt

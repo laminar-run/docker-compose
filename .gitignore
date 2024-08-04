@@ -4,3 +4,4 @@ laminar_access_info.txt
 .env
 .DS_Store
 bump.sh
+.token

@@ -137,7 +137,8 @@ services:
       retries: 10
       start_period: 30s
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   temporal:
     image: temporalio/auto-setup:1.20.0
@@ -151,7 +152,8 @@ services:
       - POSTGRES_PWD=${SPRING_DATASOURCE_PASSWORD}
       - POSTGRES_SEEDS=postgres
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - laminarnet
 
@@ -168,6 +170,7 @@ services:
 
 networks:
   laminarnet:
+    driver: bridge
 
 volumes:
   postgres_data:
