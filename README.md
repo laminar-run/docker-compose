@@ -37,10 +37,10 @@ HTTPS is enabled by default using Nginx. The `start.sh` script generates self-si
 
 After deployment, services are accessible at the following URLs:
 
-* Frontend: https://localhost
-* API: https://localhost/laminar-api
-* Keycloak: https://localhost/auth
-* Temporal UI: https://localhost/temporal
+* Frontend: https://app.localhost
+* API: https://api.localhost
+* Keycloak: https://keycloak.localhost
+* Temporal UI: https://temporal.localhost
 
 ## Environment Variables
 
