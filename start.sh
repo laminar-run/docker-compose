@@ -102,7 +102,7 @@ export LOGGING_LEVEL_RUN_LAMINAR="DEBUG"
 export KEYCLOAK_PORT="8180"
 export API_PORT="8080"
 export SPRING_TRANSACTION_DEFAULT_TIMEOUT="900"
-export API_URL="https://localhost/laminar-api"
+export API_URL="https://api.localhost"
 export SERVER_TOMCAT_ACCEPT_COUNT="300"
 export SERVER_TOMCAT_CONNECTION_TIMEOUT="20000"
 export SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE="400"
@@ -112,9 +112,9 @@ export NOTIFICATION_API_TOKEN=$(openssl rand -hex 20)
 export TEMPORAL_SERVICE_ADDRESS="temporal:7233"
 export NEXT_PUBLIC_POSTHOG_KEY=""
 export NEXT_PUBLIC_POSTHOG_HOST="https://us.posthog.com"
-export NEXTAUTH_URL="https://localhost"
-export NEXT_PUBLIC_LAMINAR_API_URL="https://localhost/laminar-api"
-export NEXT_PUBLIC_KEYCLOAK_URL="https://localhost/auth"
+export NEXTAUTH_URL="https://app.localhost"
+export NEXT_PUBLIC_LAMINAR_API_URL="https://api.localhost"
+export NEXT_PUBLIC_KEYCLOAK_URL="https://keycloak.localhost"
 export ON_PREM=true
 
 # Generate Keycloak realm JSON
@@ -139,8 +139,8 @@ Laminar Service Access Information:
 Frontend: ${NEXTAUTH_URL}
 API: ${NEXT_PUBLIC_LAMINAR_API_URL}
 Keycloak: ${NEXT_PUBLIC_KEYCLOAK_URL}
-Temporal: https://localhost/temporal
-Temporal UI: https://localhost/temporal
+Temporal: https://temporal.localhost
+Temporal UI: https://temporal.localhost
 
 Database:
   Host: localhost
@@ -156,10 +156,10 @@ echo "Service access information has been saved to laminar_access_info.txt"
 echo "Important secrets have been saved to laminar_secrets.txt"
 echo "Please keep these files secure and do not share them."
 
-echo "HTTPS is enabled. You can access the application at https://localhost"
+echo "HTTPS is enabled. You can access the application at https://app.localhost"
 echo "API is available at ${NEXT_PUBLIC_LAMINAR_API_URL}"
 echo "Keycloak is available at ${NEXT_PUBLIC_KEYCLOAK_URL}"
-echo "Temporal UI is available at https://localhost/temporal"
+echo "Temporal UI is available at https://temporal.localhost"
 echo "Please refer to the documentation for further instructions on using the API and configuring Keycloak."
 
 echo "Would you like to start the server now? (Y/n)"

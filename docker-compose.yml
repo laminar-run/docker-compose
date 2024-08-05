@@ -47,7 +47,7 @@ services:
         condition: service_started
 
   api:
-    image: laminarrun/on-prem-api:2024.08.04-v0.0.4
+    image: laminarrun/on-prem-api:2024.08.04-v0.0.5
     container_name: api
     restart: always
     volumes:
@@ -75,6 +75,7 @@ services:
       - KEYCLOAK_URI
       - KEYCLOAK_REALM
       - ON_PREM
+      - SERVER_SSL_ENABLED=false
     networks:
       - laminarnet
     healthcheck:
@@ -130,6 +131,7 @@ services:
       - KC_PROXY=edge
       - KC_HTTP_ENABLED=true
       - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false
     volumes:
       - keycloak_data:/opt/keycloak/data
       - ./keycloak-realm.json:/opt/keycloak/data/import/keycloak-realm.json
@@ -170,6 +172,8 @@ services:
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_CORS_ORIGINS=https://localhost
+      - TEMPORAL_UI_PORT=8080
+      - TEMPORAL_BASE_PATH=/temporal
     depends_on:
       - temporal
     networks:
