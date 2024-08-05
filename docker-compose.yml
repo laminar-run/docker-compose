@@ -22,17 +22,16 @@ services:
     container_name: frontend
     restart: always
     environment:
-      - NEXTAUTH_URL=https://localhost
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXT_PUBLIC_LAMINAR_API_URL=https://localhost/laminar-api
-      - NEXT_PUBLIC_KEYCLOAK_URL=https://localhost/auth
+      - NEXTAUTH_URL
+      - NEXTAUTH_SECRET
+      - NEXT_PUBLIC_LAMINAR_API_URL
+      - NEXT_PUBLIC_KEYCLOAK_URL
       - NEXT_PUBLIC_KEYCLOAK_REALM=${KEYCLOAK_REALM}
       - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
       - NEXT_PUBLIC_ENVIRONMENT=production
-      - USE_HTTPS=true
-      - NEXT_ON_PREM=true
-      - NEXT_PUBLIC_POSTHOG_KEY=${NEXT_PUBLIC_POSTHOG_KEY}
-      - NEXT_PUBLIC_POSTHOG_HOST=${NEXT_PUBLIC_POSTHOG_HOST}
+      - USE_HTTPS
+      - NEXT_PUBLIC_ON_PREM=${ON_PREM}
+      - NEXT_PUBLIC_POSTHOG_HOST
     networks:
       - laminarnet
     healthcheck:
@@ -48,34 +47,34 @@ services:
         condition: service_started
 
   api:
-    image: laminarrun/on-prem-api:2024.08.03-v0.0.3
+    image: laminarrun/on-prem-api:2024.08.04-v0.0.4
     container_name: api
     restart: always
     volumes:
       - ./certs:/app/certs:ro
     environment:
-      - db_url=jdbc:postgresql://postgres:5432/laminar
-      - spring.datasource.username=laminar
-      - spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
-      - spring.profiles.active=prod
-      - logging.level.root=${LOGGING_LEVEL_ROOT}
-      - logging.level.web=${LOGGING_LEVEL_WEB}
-      - logging.level.run.laminar=${LOGGING_LEVEL_RUN_LAMINAR}
-      - logtail_source_token=${LOGTAIL_SOURCE_TOKEN}
-      - spring.transaction.default-timeout=900
-      - api_url=https://localhost/laminar-api
-      - server.tomcat.accept-count=300
-      - server.tomcat.connection-timeout=20000
-      - spring.datasource.hikari.maximum-pool-size=400
-      - spring.datasource.hikari.max-lifetime=2000000
-      - spring.datasource.hikari.connection-timeout=30000
-      - notification_api_token=${NOTIFICATION_API_TOKEN}
-      - temporal.service.address=temporal:7233
-      - keycloak.client_id=${KEYCLOAK_CLIENT_ID}
-      - keycloak.client_secret=${KEYCLOAK_CLIENT_SECRET}
-      - keycloak.uri=${KEYCLOAK_URI}
-      - ON_PREM=true
-      - SERVER_SSL_ENABLED=false
+      - DB_URL=${SPRING_DATASOURCE_URL}
+      - SPRING_DATASOURCE_USERNAME
+      - SPRING_DATASOURCE_PASSWORD
+      - SPRING_PROFILES_ACTIVE
+      - LOGGING_LEVEL_ROOT
+      - LOGGING_LEVEL_WEB
+      - LOGGING_LEVEL_RUN_LAMINAR
+      - LOGTAIL_SOURCE_TOKEN=${NOTIFICATION_API_TOKEN}
+      - SPRING_TRANSACTION_DEFAULT_TIMEOUT
+      - API_URL
+      - SERVER_TOMCAT_ACCEPT_COUNT
+      - SERVER_TOMCAT_CONNECTION_TIMEOUT
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+      - SPRING_DATASOURCE_HIKARI_MAX_LIFETIME
+      - SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+      - NOTIFICATION_API_TOKEN
+      - TEMPORAL_SERVICE_ADDRESS
+      - KEYCLOAK_CLIENT_ID
+      - KEYCLOAK_CLIENT_SECRET
+      - KEYCLOAK_URI
+      - KEYCLOAK_REALM
+      - ON_PREM
     networks:
       - laminarnet
     healthcheck:
@@ -88,7 +87,7 @@ services:
       postgres:
         condition: service_healthy
       keycloak:
-        condition: service_started
+        condition: service_healthy
       temporal:
         condition: service_started
 
@@ -119,28 +118,31 @@ services:
     image: quay.io/keycloak/keycloak:latest
     container_name: keycloak
     environment:
-      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
-      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KEYCLOAK_ADMIN
+      - KEYCLOAK_ADMIN_PASSWORD
       - KC_DB=postgres
       - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
       - KC_DB_USERNAME=laminar
       - KC_DB_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
-      - KC_HOSTNAME=localhost
-      - KC_HOSTNAME_PORT=443
-      - KC_HOSTNAME_STRICT_HTTPS=true
+      - KC_HOSTNAME=keycloak
       - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
       - KC_PROXY=edge
-    command: start
+      - KC_HTTP_ENABLED=true
+      - KC_HOSTNAME_STRICT=false
     volumes:
       - keycloak_data:/opt/keycloak/data
+      - ./keycloak-realm.json:/opt/keycloak/data/import/keycloak-realm.json
+    command:
+      - start
+      - --import-realm
     networks:
       - laminarnet
     healthcheck:
       test: ["CMD", "/opt/keycloak/bin/kc.sh", "show-config"]
       interval: 30s
-      timeout: 15s
-      retries: 5
-      start_period: 60s
+      timeout: 10s
+      retries: 3
     depends_on:
       postgres:
         condition: service_healthy

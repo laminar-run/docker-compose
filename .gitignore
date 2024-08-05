@@ -5,3 +5,4 @@ laminar_access_info.txt
 .DS_Store
 bump.sh
 .token
+keycloak-realm.json

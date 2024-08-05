@@ -1,4 +1,37 @@
 #!/bin/bash
+
+generate_realm_json() {
+    local realm_name="$1"
+    local client_id="$2"
+    local client_secret="$3"
+
+    cat << EOF > keycloak-realm.json
+{
+  "realm": "${realm_name}",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "clients": [
+    {
+      "clientId": "${client_id}",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${client_secret}",
+      "redirectUris": ["https://localhost/*"],
+      "webOrigins": ["https://localhost"],
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true
+    }
+  ]
+}
+EOF
+}
+
 SCRIPT_DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PARENT_DIRECTORY="${SCRIPT_DIRECTORY%/*}"
 
@@ -54,10 +87,11 @@ openssl pkcs12 -export -in certs/tls.crt -inkey certs/tls.key -out certs/keystor
 
 # Set up environment variables
 export SPRING_DATASOURCE_URL="jdbc:postgresql://postgres:5432/laminar"
+export SPRING_PROFILES_ACTIVE="prod"
 export SPRING_DATASOURCE_USERNAME="laminar"
 export SPRING_DATASOURCE_PASSWORD=$(openssl rand -hex 20 | cut -c 1-16)
 export KEYCLOAK_REALM="laminar"
-export KEYCLOAK_URI="https://localhost/auth/realms/${KEYCLOAK_REALM}"
+export KEYCLOAK_URI="http://keycloak:8080/realms/${KEYCLOAK_REALM}"
 export KEYCLOAK_CLIENT_ID="laminar-client"
 export KEYCLOAK_CLIENT_SECRET=$(openssl rand -hex 20)
 export KEYCLOAK_ADMIN="admin"
@@ -78,13 +112,16 @@ export NOTIFICATION_API_TOKEN=$(openssl rand -hex 20)
 export TEMPORAL_SERVICE_ADDRESS="temporal:7233"
 export NEXT_PUBLIC_POSTHOG_KEY=""
 export NEXT_PUBLIC_POSTHOG_HOST="https://us.posthog.com"
-
 export NEXTAUTH_URL="https://localhost"
 export NEXT_PUBLIC_LAMINAR_API_URL="https://localhost/laminar-api"
 export NEXT_PUBLIC_KEYCLOAK_URL="https://localhost/auth"
+export ON_PREM=true
+
+# Generate Keycloak realm JSON
+generate_realm_json "$KEYCLOAK_REALM" "$KEYCLOAK_CLIENT_ID" "$KEYCLOAK_CLIENT_SECRET"
 
 # Create .env file
-env | grep -E "SPRING_|SECRET|KEYCLOAK_|NEXT_|NEXTAUTH_|USE_HTTPS|LOGGING_|SSL_KEYSTORE_PASSWORD|API_PORT|API_URL|SERVER_TOMCAT_|NOTIFICATION_API_TOKEN|TEMPORAL_SERVICE_ADDRESS|POSTGRES_PASSWORD|LOGTAIL_SOURCE_TOKEN" > .env
+env | grep -E "SPRING_|SECRET|KEYCLOAK_|NEXT_|NEXTAUTH_|USE_HTTPS|LOGGING_|SSL_KEYSTORE_PASSWORD|API_PORT|API_URL|SERVER_TOMCAT_|NOTIFICATION_API_TOKEN|TEMPORAL_SERVICE_ADDRESS|POSTGRES_PASSWORD|LOGTAIL_SOURCE_TOKEN|ON_PREM" > .env
 
 # Save important secrets to a separate file
 echo "DATABASE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}" > laminar_secrets.txt
