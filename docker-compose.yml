@@ -1,26 +1,11 @@
 version: "3.8"
 services:
-  nginx:
-    image: nginx:latest
-    container_name: nginx
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certs:/etc/nginx/certs:ro
-    depends_on:
-      - frontend
-      - api
-      - keycloak
-    networks:
-      - laminarnet
-
   frontend:
     image: laminarrun/on-prem-frontend:2024.08.03-v0.0.3
     container_name: frontend
     restart: always
+    ports:
+      - "3000:3000"
     environment:
       - NEXTAUTH_URL
       - NEXTAUTH_SECRET
@@ -29,7 +14,6 @@ services:
       - NEXT_PUBLIC_KEYCLOAK_REALM=${KEYCLOAK_REALM}
       - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
       - NEXT_PUBLIC_ENVIRONMENT=production
-      - USE_HTTPS
       - NEXT_PUBLIC_ON_PREM=${ON_PREM}
       - NEXT_PUBLIC_POSTHOG_HOST
     networks:
@@ -50,6 +34,8 @@ services:
     image: laminarrun/on-prem-api:2024.08.04-v0.0.5
     container_name: api
     restart: always
+    ports:
+      - "8080:8080"
     volumes:
       - ./certs:/app/certs:ro
     environment:
@@ -97,7 +83,7 @@ services:
     container_name: postgres
     restart: always
     ports:
-      - 5432:5432
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
@@ -118,6 +104,8 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:latest
     container_name: keycloak
+    ports:
+      - "8180:8080"
     environment:
       - KEYCLOAK_ADMIN
       - KEYCLOAK_ADMIN_PASSWORD
@@ -125,13 +113,9 @@ services:
       - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
       - KC_DB_USERNAME=laminar
       - KC_DB_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
-      - KC_HOSTNAME=keycloak
-      - KC_HEALTH_ENABLED=true
-      - KC_METRICS_ENABLED=true
-      - KC_PROXY=edge
-      - KC_HTTP_ENABLED=true
       - KC_HOSTNAME_STRICT=false
       - KC_HOSTNAME_STRICT_HTTPS=false
+      - KC_HTTP_ENABLED=true
     volumes:
       - keycloak_data:/opt/keycloak/data
       - ./keycloak-realm.json:/opt/keycloak/data/import/keycloak-realm.json
@@ -153,7 +137,7 @@ services:
     image: temporalio/auto-setup:1.20.0
     container_name: temporal
     ports:
-      - 7233:7233
+      - "7233:7233"
     environment:
       - DB=postgresql
       - DB_PORT=5432
@@ -169,9 +153,11 @@ services:
   temporal-ui:
     image: temporalio/ui:2.10.3
     container_name: temporal-ui
+    ports:
+      - "8081:8080"
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CORS_ORIGINS=https://localhost
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
       - TEMPORAL_UI_PORT=8080
       - TEMPORAL_BASE_PATH=/temporal
     depends_on:

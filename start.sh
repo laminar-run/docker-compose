@@ -17,8 +17,8 @@ generate_realm_json() {
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
       "secret": "${client_secret}",
-      "redirectUris": ["https://localhost/*"],
-      "webOrigins": ["https://localhost"],
+      "redirectUris": ["http://*"],
+      "webOrigins": ["http://*"],
       "protocol": "openid-connect",
       "publicClient": false,
       "bearerOnly": false,
@@ -68,22 +68,19 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-mkdir -p certs
-
 # Generate necessary keys and secrets
 export SECRET=$(openssl rand -hex 20 | cut -c 1-32)
 export NEXTAUTH_SECRET=$(openssl rand -base64 32)
 
-# HTTPS is always enabled with Nginx
-export USE_HTTPS=true
+# Prompt for domain or use the default domain
+echo "Enter the domain name or IP address for your Laminar installation (leave blank for localhost):"
+read -r DOMAIN
 
-# Generate self-signed SSL certificate
-mkdir -p certs
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout certs/tls.key -out certs/tls.crt -subj "/CN=localhost"
+if [ -z "$DOMAIN" ]; then
+  DOMAIN="localhost"
+fi
 
-# Create a PKCS12 keystore for the API
-export SSL_KEYSTORE_PASSWORD=$(openssl rand -hex 16)
-openssl pkcs12 -export -in certs/tls.crt -inkey certs/tls.key -out certs/keystore.p12 -name laminar -password pass:$SSL_KEYSTORE_PASSWORD
+echo "Setting up Laminar for domain: $DOMAIN"
 
 # Set up environment variables
 export SPRING_DATASOURCE_URL="jdbc:postgresql://postgres:5432/laminar"
@@ -99,7 +96,6 @@ export KEYCLOAK_ADMIN_PASSWORD=$(openssl rand -hex 20)
 export LOGGING_LEVEL_ROOT="WARN"
 export LOGGING_LEVEL_WEB="INFO"
 export LOGGING_LEVEL_RUN_LAMINAR="DEBUG"
-export KEYCLOAK_PORT="8180"
 export API_PORT="8080"
 export SPRING_TRANSACTION_DEFAULT_TIMEOUT="900"
 export API_URL="https://api.localhost"
@@ -112,9 +108,9 @@ export NOTIFICATION_API_TOKEN=$(openssl rand -hex 20)
 export TEMPORAL_SERVICE_ADDRESS="temporal:7233"
 export NEXT_PUBLIC_POSTHOG_KEY=""
 export NEXT_PUBLIC_POSTHOG_HOST="https://us.posthog.com"
-export NEXTAUTH_URL="https://app.localhost"
-export NEXT_PUBLIC_LAMINAR_API_URL="https://api.localhost"
-export NEXT_PUBLIC_KEYCLOAK_URL="https://keycloak.localhost"
+export NEXTAUTH_URL="http://${DOMAIN}:3000"
+export NEXT_PUBLIC_LAMINAR_API_URL="http://${DOMAIN}:8080"
+export NEXT_PUBLIC_KEYCLOAK_URL="http://${DOMAIN}:8180"
 export ON_PREM=true
 
 # Generate Keycloak realm JSON
@@ -130,7 +126,6 @@ echo "NEXTAUTH_SECRET=${NEXTAUTH_SECRET}" >> laminar_secrets.txt
 echo "KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}" >> laminar_secrets.txt
 echo "KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}" >> laminar_secrets.txt
 echo "NOTIFICATION_API_TOKEN=${NOTIFICATION_API_TOKEN}" >> laminar_secrets.txt
-echo "SSL_KEYSTORE_PASSWORD=${SSL_KEYSTORE_PASSWORD}" >> laminar_secrets.txt
 
 # Output service access information to a file
 cat << EOF > laminar_access_info.txt
@@ -139,8 +134,10 @@ Laminar Service Access Information:
 Frontend: ${NEXTAUTH_URL}
 API: ${NEXT_PUBLIC_LAMINAR_API_URL}
 Keycloak: ${NEXT_PUBLIC_KEYCLOAK_URL}
-Temporal: https://temporal.localhost
-Temporal UI: https://temporal.localhost
+  - Username: ${KEYCLOAK_ADMIN}
+  - Password: ${KEYCLOAK_ADMIN_PASSWORD}
+Temporal: http://${DOMAIN}:7233
+Temporal UI: http://${DOMAIN}:8081
 
 Database:
   Host: localhost
@@ -156,10 +153,10 @@ echo "Service access information has been saved to laminar_access_info.txt"
 echo "Important secrets have been saved to laminar_secrets.txt"
 echo "Please keep these files secure and do not share them."
 
-echo "HTTPS is enabled. You can access the application at https://app.localhost"
-echo "API is available at ${NEXT_PUBLIC_LAMINAR_API_URL}"
-echo "Keycloak is available at ${NEXT_PUBLIC_KEYCLOAK_URL}"
-echo "Temporal UI is available at https://temporal.localhost"
+echo "You can access the application at ${NEXTAUTH_URL}"
+echo "API will be available at ${NEXT_PUBLIC_LAMINAR_API_URL}"
+echo "Keycloak will be available at ${NEXT_PUBLIC_KEYCLOAK_URL}"
+echo "Temporal UI will be available at http://${DOMAIN}:8081"
 echo "Please refer to the documentation for further instructions on using the API and configuring Keycloak."
 
 echo "Would you like to start the server now? (Y/n)"
