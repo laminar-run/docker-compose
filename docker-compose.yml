@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   frontend:
-    image: laminarrun/on-prem-frontend:2024.08.03-v0.0.3
+    image: laminarrun/on-prem-frontend:2024.08.19-v0.0.4
     container_name: frontend
     restart: always
     ports:
@@ -10,12 +10,13 @@ services:
       - NEXTAUTH_URL
       - NEXTAUTH_SECRET
       - NEXT_PUBLIC_LAMINAR_API_URL
-      - NEXT_PUBLIC_KEYCLOAK_URL
-      - NEXT_PUBLIC_KEYCLOAK_REALM=${KEYCLOAK_REALM}
-      - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
       - NEXT_PUBLIC_ENVIRONMENT=production
       - NEXT_PUBLIC_ON_PREM=${ON_PREM}
       - NEXT_PUBLIC_POSTHOG_HOST
+      - KEYCLOAK_URI
+      - KEYCLOAK_REALM
+      - KEYCLOAK_CLIENT_ID
+      - KEYCLOAK_CLIENT_SECRET
     networks:
       - laminarnet
     healthcheck:

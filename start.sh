@@ -4,30 +4,93 @@ generate_realm_json() {
     local realm_name="$1"
     local client_id="$2"
     local client_secret="$3"
+    local frontend_url="$4"
 
     cat << EOF > keycloak-realm.json
 {
   "realm": "${realm_name}",
   "enabled": true,
   "sslRequired": "external",
-  "registrationAllowed": false,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
   "clients": [
     {
       "clientId": "${client_id}",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
       "secret": "${client_secret}",
-      "redirectUris": ["http://*"],
-      "webOrigins": ["http://*"],
+      "redirectUris": [
+        "${frontend_url}/*",
+        "http://localhost/*"
+      ],
+      "webOrigins": [
+        "${frontend_url}",
+        "http://localhost"
+      ],
       "protocol": "openid-connect",
       "publicClient": false,
-      "bearerOnly": false,
+      "authorizationServicesEnabled": true,
+      "serviceAccountsEnabled": true,
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": true,
-      "serviceAccountsEnabled": true
+      "frontchannelLogout": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
     }
-  ]
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "User role"
+      },
+      {
+        "name": "admin",
+        "description": "Admin role"
+      }
+    ]
+  },
+  "defaultRoles": ["user"],
+  "scopeMappings": [
+    {
+      "client": "${client_id}",
+      "roles": ["user"]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "profile",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "username",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultDefaultClientScopes": ["profile", "email"]
 }
 EOF
 }
@@ -98,7 +161,7 @@ export LOGGING_LEVEL_WEB="INFO"
 export LOGGING_LEVEL_RUN_LAMINAR="DEBUG"
 export API_PORT="8080"
 export SPRING_TRANSACTION_DEFAULT_TIMEOUT="900"
-export API_URL="https://api.localhost"
+export API_URL="http://localhost:8080"
 export SERVER_TOMCAT_ACCEPT_COUNT="300"
 export SERVER_TOMCAT_CONNECTION_TIMEOUT="20000"
 export SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE="400"
@@ -110,11 +173,10 @@ export NEXT_PUBLIC_POSTHOG_KEY=""
 export NEXT_PUBLIC_POSTHOG_HOST="https://us.posthog.com"
 export NEXTAUTH_URL="http://${DOMAIN}:3000"
 export NEXT_PUBLIC_LAMINAR_API_URL="http://${DOMAIN}:8080"
-export NEXT_PUBLIC_KEYCLOAK_URL="http://${DOMAIN}:8180"
 export ON_PREM=true
 
 # Generate Keycloak realm JSON
-generate_realm_json "$KEYCLOAK_REALM" "$KEYCLOAK_CLIENT_ID" "$KEYCLOAK_CLIENT_SECRET"
+generate_realm_json "$KEYCLOAK_REALM" "$KEYCLOAK_CLIENT_ID" "$KEYCLOAK_CLIENT_SECRET" "$NEXTAUTH_URL"
 
 # Create .env file
 env | grep -E "SPRING_|SECRET|KEYCLOAK_|NEXT_|NEXTAUTH_|USE_HTTPS|LOGGING_|SSL_KEYSTORE_PASSWORD|API_PORT|API_URL|SERVER_TOMCAT_|NOTIFICATION_API_TOKEN|TEMPORAL_SERVICE_ADDRESS|POSTGRES_PASSWORD|LOGTAIL_SOURCE_TOKEN|ON_PREM" > .env
