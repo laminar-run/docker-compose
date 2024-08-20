@@ -1,6 +1,6 @@
-PHONY: start reset update dependencies
+PHONY: laminar reset update dependencies
 
-start:
+laminar:
 	./start.sh
 
 reset:

@@ -15,6 +15,6 @@ echo "Deleting old volumes..."
 docker volume prune -f
 
 echo "Removing files..."
-rm -rf $PARENT_DIRECTORY/certs
 rm -rf $PARENT_DIRECTORY/.env
 rm -rf $PARENT_DIRECTORY/laminar_*.txt
+rm -rf $PARENT_DIRECTORY/keycloak-realm.json

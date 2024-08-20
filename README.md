@@ -5,7 +5,7 @@ This repository contains the necessary files to deploy Laminar on-premises using
 ### Start Laminar
 To quickly set up and start Laminar, run:
 ```bash
-make start
+make laminar
 ```
 
 ### Reset Laminar

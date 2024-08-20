@@ -68,7 +68,6 @@ if [ $? -ne 0 ]; then
 fi
 
 # Generate necessary keys and secrets
-export SECRET=$(openssl rand -hex 20 | cut -c 1-32)
 export NEXTAUTH_SECRET=$(openssl rand -base64 32)
 
 # Prompt for domain or use the default domain
@@ -114,48 +113,130 @@ export ON_PREM=true
 # Generate Keycloak realm JSON
 generate_realm_json "$KEYCLOAK_REALM" "$KEYCLOAK_CLIENT_ID" "$KEYCLOAK_CLIENT_SECRET"
 
-# Create .env file
-env | grep -E "SPRING_|SECRET|KEYCLOAK_|NEXT_|NEXTAUTH_|USE_HTTPS|LOGGING_|SSL_KEYSTORE_PASSWORD|API_PORT|API_URL|SERVER_TOMCAT_|NOTIFICATION_API_TOKEN|TEMPORAL_SERVICE_ADDRESS|POSTGRES_PASSWORD|LOGTAIL_SOURCE_TOKEN|ON_PREM" > .env
+cat << EOF > laminar_secrets.txt
+# Laminar On-Premise Secrets
 
-# Save important secrets to a separate file
-echo "DATABASE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}" > laminar_secrets.txt
-echo "SECRET=${SECRET}" >> laminar_secrets.txt
-echo "NEXTAUTH_SECRET=${NEXTAUTH_SECRET}" >> laminar_secrets.txt
-echo "KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}" >> laminar_secrets.txt
-echo "KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}" >> laminar_secrets.txt
-echo "NOTIFICATION_API_TOKEN=${NOTIFICATION_API_TOKEN}" >> laminar_secrets.txt
+# Database Password
+DATABASE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+
+# Next.js Secret
+NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+
+# Keycloak Admin Password
+KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+
+# Keycloak Client Secret
+KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+
+# Notification API Token
+NOTIFICATION_API_TOKEN=${NOTIFICATION_API_TOKEN}
+
+EOF
+
+# Create .env file with a header and organized sections
+cat << EOF > .env
+# Laminar On-Premise Environment Configuration
+# Generated on $(date)
+
+# Database Configuration
+SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+
+# Spring and Server Configuration
+SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+API_PORT=${API_PORT}
+API_URL=${API_URL}
+SERVER_TOMCAT_ACCEPT_COUNT=${SERVER_TOMCAT_ACCEPT_COUNT}
+SERVER_TOMCAT_CONNECTION_TIMEOUT=${SERVER_TOMCAT_CONNECTION_TIMEOUT}
+SPRING_TRANSACTION_DEFAULT_TIMEOUT=${SPRING_TRANSACTION_DEFAULT_TIMEOUT}
+SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE}
+SPRING_DATASOURCE_HIKARI_MAX_LIFETIME=${SPRING_DATASOURCE_HIKARI_MAX_LIFETIME}
+SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=${SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT}
+
+# Logging Configuration
+LOGGING_LEVEL_ROOT=${LOGGING_LEVEL_ROOT}
+LOGGING_LEVEL_WEB=${LOGGING_LEVEL_WEB}
+LOGGING_LEVEL_RUN_LAMINAR=${LOGGING_LEVEL_RUN_LAMINAR}
+
+# Keycloak Configuration
+KEYCLOAK_URI=${KEYCLOAK_URI}
+KEYCLOAK_REALM=${KEYCLOAK_REALM}
+KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
+KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+
+# Temporal Configuration
+TEMPORAL_SERVICE_ADDRESS=${TEMPORAL_SERVICE_ADDRESS}
+
+# Next.js Configuration
+NEXTAUTH_URL=${NEXTAUTH_URL}
+NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+NEXT_PUBLIC_LAMINAR_API_URL=${NEXT_PUBLIC_LAMINAR_API_URL}
+NEXT_PUBLIC_POSTHOG_KEY=${NEXT_PUBLIC_POSTHOG_KEY}
+NEXT_PUBLIC_POSTHOG_HOST=${NEXT_PUBLIC_POSTHOG_HOST}
+
+# Other Configuration
+ON_PREM=${ON_PREM}
+NOTIFICATION_API_TOKEN=${NOTIFICATION_API_TOKEN}
+EOF
 
 # Output service access information to a file
 cat << EOF > laminar_access_info.txt
-Laminar Service Access Information:
+Laminar On-Premise Service Access Information
+=============================================
+Generated on $(date)
 
-Frontend: ${NEXTAUTH_URL}
-API: ${NEXT_PUBLIC_LAMINAR_API_URL}
-Keycloak: ${NEXT_PUBLIC_KEYCLOAK_URL}
-  - Username: ${KEYCLOAK_ADMIN}
-  - Password: ${KEYCLOAK_ADMIN_PASSWORD}
-Temporal: http://${DOMAIN}:7233
-Temporal UI: http://${DOMAIN}:8081
+Frontend Access
+---------------
+URL: ${NEXTAUTH_URL}
 
-Database:
-  Host: localhost
-  Port: 5432
-  Username: laminar
-  Database: laminar
+API Access
+----------
+URL: ${NEXT_PUBLIC_LAMINAR_API_URL}
 
-Please refer to laminar_secrets.txt for passwords and other sensitive information.
+Keycloak Access
+---------------
+URL: http://${DOMAIN}:8180
+Admin Username: ${KEYCLOAK_ADMIN}
+Admin Password: ${KEYCLOAK_ADMIN_PASSWORD}
+Realm: ${KEYCLOAK_REALM}
+Client ID: ${KEYCLOAK_CLIENT_ID}
+
+Temporal Access
+---------------
+Service URL: ${TEMPORAL_SERVICE_ADDRESS}
+UI URL: http://${DOMAIN}:8081
+
+Database Access
+---------------
+Host: localhost
+Port: 5432
+Username: ${SPRING_DATASOURCE_USERNAME}
+Password: ${SPRING_DATASOURCE_PASSWORD}
+Database: laminar
+Keycloak Database: keycloak
+
+Important Notes
+---------------
+1. Please refer to laminar_secrets.txt for passwords and other sensitive information.
+2. Keep both laminar_access_info.txt and laminar_secrets.txt secure and do not share them.
+3. For detailed API usage and Keycloak configuration, please refer to the documentation.
+
 EOF
 
 echo "Laminar setup complete!"
+echo "Environment configuration has been saved to .env"
 echo "Service access information has been saved to laminar_access_info.txt"
 echo "Important secrets have been saved to laminar_secrets.txt"
 echo "Please keep these files secure and do not share them."
 
-echo "You can access the application at ${NEXTAUTH_URL}"
-echo "API will be available at ${NEXT_PUBLIC_LAMINAR_API_URL}"
-echo "Keycloak will be available at ${NEXT_PUBLIC_KEYCLOAK_URL}"
-echo "Temporal UI will be available at http://${DOMAIN}:8081"
-echo "Please refer to the documentation for further instructions on using the API and configuring Keycloak."
+echo "You can now access the services as follows:"
+echo "- Frontend: ${NEXTAUTH_URL}"
+echo "- API: ${NEXT_PUBLIC_LAMINAR_API_URL}"
+echo "- Keycloak: http://${DOMAIN}:8180"
+echo "- Temporal UI: http://${DOMAIN}:8081"
 
 echo "Would you like to start the server now? (Y/n)"
 read -r START_SERVER
